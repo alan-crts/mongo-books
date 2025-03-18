@@ -1,0 +1,53 @@
+services:
+  mongo:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27018:27017"
+    env_file:
+      - db/.env
+    volumes:
+      - ./books/db/import:/tmp/import
+      - ./books/db/init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh
+    networks:
+      - bk
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongo
+    env_file:
+      - mongo-express/.env
+    networks:
+      - bk
+  app:
+    image: node:latest
+    container_name: app
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./app:/app
+    working_dir: /app
+    command: ["npm", "start"]
+    depends_on:
+      - mongo
+    networks:
+      - bk
+      
+volumes:
+  mongodb_data:
+
+networks:
+  bk:
+    driver: bridge
